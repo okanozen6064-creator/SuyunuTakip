@@ -32,10 +32,21 @@ class MainApp extends StatelessWidget {
       initialData: null,
       child: MaterialApp(
         initialRoute: '/',
+        onGenerateRoute: (settings) {
+          if (settings.name != null && settings.name!.startsWith('/alarm/')) {
+            final drugId = settings.name!.split('/').last;
+            return MaterialPageRoute(
+              builder: (context) {
+                return AlarmScreen(drugId: drugId);
+              },
+            );
+          }
+          // Handle other routes, or default
+          return MaterialPageRoute(builder: (context) => const Wrapper());
+        },
+        // Legacy routes for non-dynamic routing
         routes: {
           '/': (context) => const Wrapper(),
-          '/alarm': (context) => const AlarmScreen(),
-          // TODO: Extract drugId from arguments for AlarmScreen
         },
       ),
     );

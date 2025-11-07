@@ -1,7 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:disciplined_coach/models/drug.dart';
+import 'package:disciplined_coach/services/alarm_service.dart';
+import 'package:disciplined_coach/services/database_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class AddDrugScreen extends StatefulWidget {
-  const AddDrugScreen({super.key});
+  final Drug? drug;
+
+  const AddDrugScreen({super.key, this.drug});
 
   @override
   State<AddDrugScreen> createState() => _AddDrugScreenState();
@@ -9,42 +17,146 @@ class AddDrugScreen extends StatefulWidget {
 
 class _AddDrugScreenState extends State<AddDrugScreen> {
   final _formKey = GlobalKey<FormState>();
+  final AlarmService _alarmService = AlarmService();
 
-  // Form values will be added here later
+  // Form values
+  String? _name;
+  String? _dosage;
+  String _frequencyType = 'Saatlik';
+  int? _frequencyValue;
+  DateTime? _startDate;
+  int? _stockTotal;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.drug != null) {
+      _name = widget.drug!.name;
+      _dosage = widget.drug!.dosage;
+      _frequencyType = widget.drug!.frequencyType;
+      _frequencyValue = widget.drug!.frequencyValue;
+      _startDate = widget.drug!.startDate.toDate();
+      _stockTotal = widget.drug!.stockTotal;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<User?>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Yeni İlaç Ekle'),
+        title: Text(widget.drug == null ? 'Yeni İlaç Ekle' : 'İlacı Düzenle'),
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: <Widget>[
-            const Text('İlaç Detayları'),
-            TextFormField(
-              decoration: const InputDecoration(hintText: 'İlaç Adı'),
-              validator: (val) => val!.isEmpty ? 'Lütfen bir isim girin' : null,
-              // onChanged: (val) => setState(() => _name = val),
-            ),
-            TextFormField(
-              decoration: const InputDecoration(hintText: 'Dozaj (örn: 500mg)'),
-              validator: (val) => val!.isEmpty ? 'Lütfen bir dozaj girin' : null,
-              // onChanged: (val) => setState(() => _dosage = val),
-            ),
-            // ... Other form fields will be added here
-            ElevatedButton(
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  // TODO: Save to Firestore and set alarm
-                }
-              },
-              child: const Text('Kaydet'),
-            )
-          ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              TextFormField(
+                initialValue: _name,
+                decoration: const InputDecoration(labelText: 'İlaç Adı'),
+                validator: (val) => val!.isEmpty ? 'Lütfen bir isim girin' : null,
+                onSaved: (val) => _name = val,
+              ),
+              TextFormField(
+                initialValue: _dosage,
+                decoration: const InputDecoration(labelText: 'Dozaj (örn: 500mg)'),
+                validator: (val) => val!.isEmpty ? 'Lütfen bir dozaj girin' : null,
+                onSaved: (val) => _dosage = val,
+              ),
+              DropdownButtonFormField<String>(
+                value: _frequencyType,
+                decoration: const InputDecoration(labelText: 'Sıklık Tipi'),
+                items: ['Saatlik', 'Günlük'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => _frequencyType = val!),
+              ),
+              TextFormField(
+                initialValue: _frequencyValue?.toString(),
+                decoration: InputDecoration(labelText: 'Sıklık Değeri (örn: 8 saat, 1 gün)'),
+                keyboardType: TextInputType.number,
+                validator: (val) => val!.isEmpty ? 'Lütfen bir değer girin' : null,
+                onSaved: (val) => _frequencyValue = int.tryParse(val!),
+              ),
+              TextFormField(
+                initialValue: _stockTotal?.toString(),
+                decoration: const InputDecoration(labelText: 'Stok Adedi'),
+                keyboardType: TextInputType.number,
+                validator: (val) => val!.isEmpty ? 'Lütfen bir adet girin' : null,
+                onSaved: (val) => _stockTotal = int.tryParse(val!),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_startDate == null
+                        ? 'Başlangıç Tarihi Seçilmedi'
+                        : 'Başlangıç: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'),
+                  ),
+                  TextButton(
+                    onPressed: () => _selectDate(context),
+                    child: const Text('Tarih Seç'),
+                  )
+                ],
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate() && _startDate != null) {
+                    _formKey.currentState!.save();
+                    final dbService = DatabaseService(uid: user!.uid);
+
+                    final drugData = {
+                      'name': _name,
+                      'dosage': _dosage,
+                      'frequencyType': _frequencyType,
+                      'frequencyValue': _frequencyValue,
+                      'startDate': Timestamp.fromDate(_startDate!),
+                      'stockTotal': _stockTotal,
+                      'stockRemaining': _stockTotal, // Initially same as total
+                    };
+
+                    if (widget.drug == null) {
+                      // Add new drug
+                      DocumentReference docRef = await dbService.addDrug(drugData);
+                      // Set first alarm
+                      await _alarmService.setExactDrugAlarm(docRef.id, _startDate!);
+                    } else {
+                      // Update existing drug
+                      // TODO: Add updateDrug method to DatabaseService
+                      // await dbService.updateDrug(widget.drug!.id, drugData);
+                      // TODO: Recalculate and set next alarm
+                    }
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+                child: const Text('Kaydet'),
+              )
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _startDate) {
+      setState(() {
+        _startDate = picked;
+      });
+    }
   }
 }

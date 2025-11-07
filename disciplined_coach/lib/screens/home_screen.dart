@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:disciplined_coach/models/drug.dart';
+import 'package:disciplined_coach/screens/add_drug_screen.dart';
 import 'package:disciplined_coach/services/auth_service.dart';
 import 'package:disciplined_coach/services/database_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:disciplined_coach/screens/add_drug_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -51,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _buildWaterTrackerCard(context, currentWater, waterGoal, waterProgress, user.uid),
                   const SizedBox(height: 20),
-                  _buildMedicationListCard(context),
+                  _buildMedicationListCard(context, user.uid),
                 ],
               ),
             ),
@@ -126,7 +127,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMedicationListCard(BuildContext context) {
+  Widget _buildMedicationListCard(BuildContext context, String uid) {
     return Card(
       elevation: 4.0,
       child: Padding(
@@ -135,7 +136,42 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text('Bugünün İlaçları', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
-            const Text('Henüz ilaç eklenmedi.'),
+            StreamBuilder<List<Drug>>(
+              stream: DatabaseService(uid: uid).drugs,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Text('Henüz ilaç eklenmedi.');
+                }
+                final drugs = snapshot.data!;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: drugs.length,
+                  itemBuilder: (context, index) {
+                    final drug = drugs[index];
+                    return Dismissible(
+                      key: Key(drug.id),
+                      onDismissed: (direction) async {
+                        await DatabaseService(uid: uid).deleteDrug(drug.id);
+                      },
+                      background: Container(color: Colors.red),
+                      child: ListTile(
+                        title: Text(drug.name),
+                        subtitle: Text(drug.dosage),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddDrugScreen(drug: drug),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),

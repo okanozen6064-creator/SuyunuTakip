@@ -22,13 +22,13 @@ class AlarmReceiver : BroadcastReceiver() {
         )
         notificationManager.createNotificationChannel(channel)
 
+        val drugId = intent.getStringExtra("drugId")
+
         // Create an intent to launch the app
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             // Pass data to Flutter
-            putExtra("route", "/alarm")
-            // TODO: Pass drugId to show the correct alarm screen in Flutter
-            // putExtra("drugId", intent.getStringExtra("drugId"))
+            putExtra("route", "/alarm/$drugId")
         }
 
         val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_IMMUTABLE)

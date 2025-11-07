@@ -63,6 +63,11 @@ class DatabaseService {
     }).toList();
   }
 
+  // Delete a drug
+  Future<void> deleteDrug(String drugId) async {
+    return await drugCollection.doc(drugId).delete();
+  }
+
   // Add a drug history record
   Future<void> addDrugHistory(String drugId, String status) async {
     await drugHistoryCollection.add({

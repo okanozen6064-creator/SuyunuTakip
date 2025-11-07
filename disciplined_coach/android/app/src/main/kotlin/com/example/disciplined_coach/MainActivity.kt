@@ -33,11 +33,12 @@ class MainActivity: FlutterActivity() {
                 result.success("Redirected to battery settings.")
             } else if (call.method == "setExactDrugAlarm") {
                 val timestamp = call.argument<Long>("timestamp")
-                if (timestamp != null) {
-                    setExactAlarm(timestamp)
-                    result.success("Alarm set for timestamp: $timestamp")
+                val drugId = call.argument<String>("drugId")
+                if (timestamp != null && drugId != null) {
+                    setExactAlarm(timestamp, drugId)
+                    result.success("Alarm set for $drugId at timestamp: $timestamp")
                 } else {
-                    result.error("INVALID_ARGUMENT", "Timestamp argument is missing or invalid.", null)
+                    result.error("INVALID_ARGUMENT", "Timestamp or drugId argument is missing or invalid.", null)
                 }
             } else {
                 result.notImplemented()
@@ -45,11 +46,12 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun setExactAlarm(timestamp: Long) {
+    private fun setExactAlarm(timestamp: Long, drugId: String) {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(this, AlarmReceiver::class.java)
-        // TODO: Pass drugId or other relevant data in the intent
-        val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val intent = Intent(this, AlarmReceiver::class.java).apply {
+            putExtra("drugId", drugId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(this, drugId.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
         alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timestamp, pendingIntent)
     }
