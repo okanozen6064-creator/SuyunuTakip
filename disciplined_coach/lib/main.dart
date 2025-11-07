@@ -13,9 +13,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print("Firebase başarıyla başlatıldı! - Disiplinli Koç");
+    // print("Firebase başarıyla başlatıldı! - Disiplinli Koç");
   } catch (e) {
-    print("Firebase başlatma HATASI: $e");
+    // print("Firebase başlatma HATASI: $e");
   }
 
   runApp(const MainApp());
