@@ -15,6 +15,8 @@ class Wrapper extends StatelessWidget {
     if (user == null) {
       return const LoginScreen();
     } else {
+      // TODO: Add logic to check if permissions are already granted.
+      // If not, return PermissionScreen();
       return const HomeScreen();
     }
   }

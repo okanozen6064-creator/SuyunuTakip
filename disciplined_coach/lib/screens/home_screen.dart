@@ -4,6 +4,7 @@ import 'package:disciplined_coach/services/database_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:disciplined_coach/screens/add_drug_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -53,6 +54,16 @@ class HomeScreen extends StatelessWidget {
                   _buildMedicationListCard(context),
                 ],
               ),
+            ),
+            floatingActionButton: FloatingActionButton(
+              tooltip: 'İlaç Ekle',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddDrugScreen()),
+                );
+              },
+              child: const Icon(Icons.add),
             ),
           );
         } else {
