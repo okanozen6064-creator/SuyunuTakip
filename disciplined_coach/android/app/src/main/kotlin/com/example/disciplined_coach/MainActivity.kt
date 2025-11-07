@@ -5,7 +5,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -31,6 +33,14 @@ class MainActivity: FlutterActivity() {
                 intent.data = Uri.parse("package:$packageName")
                 startActivity(intent)
                 result.success("Redirected to battery settings.")
+            } else if (call.method == "checkIgnoreBatteryOptimizations") {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                    val isIgnoring = powerManager.isIgnoringBatteryOptimizations(packageName)
+                    result.success(isIgnoring)
+                } else {
+                    result.success(true) // Not needed for older APIs
+                }
             } else if (call.method == "setExactDrugAlarm") {
                 val timestamp = call.argument<Long>("timestamp")
                 val drugId = call.argument<String>("drugId")

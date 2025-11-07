@@ -130,9 +130,9 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                       await _alarmService.setExactDrugAlarm(docRef.id, _startDate!);
                     } else {
                       // Update existing drug
-                      // TODO: Add updateDrug method to DatabaseService
-                      // await dbService.updateDrug(widget.drug!.id, drugData);
-                      // TODO: Recalculate and set next alarm
+                      await dbService.updateDrug(widget.drug!.id, drugData);
+                      // Recalculate and set next alarm
+                      await _alarmService.setExactDrugAlarm(widget.drug!.id, _startDate!);
                     }
                     if (mounted) Navigator.pop(context);
                   }

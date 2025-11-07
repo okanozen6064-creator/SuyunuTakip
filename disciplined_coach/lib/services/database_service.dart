@@ -29,6 +29,13 @@ class DatabaseService {
     return userCollection.doc(uid).snapshots();
   }
 
+  // Update discipline score
+  Future<void> updateDisciplineScore(int newScore) async {
+    return await userCollection.doc(uid).update({
+      'disciplineScore': newScore,
+    });
+  }
+
   // Update current water
   Future<void> updateCurrentWater(double newWaterAmount) async {
     return await userCollection.doc(uid).update({
@@ -39,6 +46,11 @@ class DatabaseService {
   // Add a new drug
   Future<DocumentReference> addDrug(Map<String, dynamic> drugData) async {
     return await drugCollection.add(drugData);
+  }
+
+  // Update an existing drug
+  Future<void> updateDrug(String drugId, Map<String, dynamic> drugData) async {
+    return await drugCollection.doc(drugId).update(drugData);
   }
 
   // Get drugs stream

@@ -74,8 +74,19 @@ class _AlarmScreenState extends State<AlarmScreen> {
     final dbService = DatabaseService(uid: user!.uid);
     final alarmService = AlarmService();
 
-    // TODO: Implement proper next alarm calculation
-    final nextAlarmTime = DateTime.now().add(const Duration(hours: 8));
+    final frequencyType = drugData['frequencyType'] ?? 'Saatlik';
+    final frequencyValue = drugData['frequencyValue'] ?? 8;
+    final stockRemaining = drugData['stockRemaining'] ?? 0;
+
+    DateTime calculateNextAlarmTime() {
+      if (frequencyType == 'Saatlik') {
+        return DateTime.now().add(Duration(hours: frequencyValue));
+      } else {
+        return DateTime.now().add(Duration(days: frequencyValue));
+      }
+    }
+
+    final nextAlarmTime = calculateNextAlarmTime();
 
     return Column(
       children: [
@@ -84,9 +95,11 @@ class _AlarmScreenState extends State<AlarmScreen> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(20)),
             onPressed: () async {
-              await dbService.addDrugHistory(widget.drugId, 'alındı');
-              // TODO: Update stock
-              await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+              if (stockRemaining > 0) {
+                await dbService.updateDrug(widget.drugId, {'stockRemaining': stockRemaining - 1});
+                await dbService.addDrugHistory(widget.drugId, 'alındı');
+                await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+              }
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Aldım', style: TextStyle(fontSize: 20)),

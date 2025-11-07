@@ -11,5 +11,12 @@ class PermissionService {
     }
   }
 
-  // TODO: Add method to check for SCHEDULE_EXACT_ALARM permission
+  Future<bool> checkIgnoreBatteryOptimizations() async {
+    try {
+      final bool isIgnoring = await platform.invokeMethod('checkIgnoreBatteryOptimizations');
+      return isIgnoring;
+    } on PlatformException {
+      return false;
+    }
+  }
 }
