@@ -25,9 +25,6 @@ class HomeScreen extends StatelessWidget {
         if (snapshot.hasData) {
           final userData = snapshot.data!.data() as Map<String, dynamic>?;
           final disciplineScore = userData?['disciplineScore'] ?? 100;
-          final currentWater = userData?['currentWater'] ?? 0.0;
-          final waterGoal = userData?['waterGoal'] ?? 2500.0;
-          final waterProgress = (waterGoal > 0) ? currentWater / waterGoal : 0.0;
 
           return Scaffold(
             appBar: AppBar(
@@ -49,8 +46,6 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   _buildDisciplineScoreCard(context, disciplineScore),
-                  const SizedBox(height: 20),
-                  _buildWaterTrackerCard(context, currentWater, waterGoal, waterProgress, user.uid),
                   const SizedBox(height: 20),
                   _buildMedicationListCard(context, user.uid),
                 ],
@@ -75,8 +70,18 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDisciplineScoreCard(BuildContext context, int score) {
+    Color cardColor;
+    if (score >= 80) {
+      cardColor = Colors.green.shade100;
+    } else if (score >= 50) {
+      cardColor = Colors.orange.shade100;
+    } else {
+      cardColor = Colors.red.shade100;
+    }
+
     return Card(
       elevation: 4.0,
+      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -84,43 +89,6 @@ class HomeScreen extends StatelessWidget {
             Text('Disiplin Puanı', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
             Text(score.toString(), style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaterTrackerCard(BuildContext context, double current, double goal, double progress, String uid) {
-    final dbService = DatabaseService(uid: uid);
-    return Card(
-      elevation: 4.0,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text('Günlük Su Takibi', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            Text('${current.toInt()} / ${goal.toInt()} ml'),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(value: progress),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    await dbService.updateCurrentWater(current + 200);
-                  },
-                  child: const Text('+200 ml'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    await dbService.updateCurrentWater(current + 500);
-                  },
-                  child: const Text('+500 ml'),
-                ),
-              ],
-            ),
           ],
         ),
       ),
