@@ -125,6 +125,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
             onPressed: () async {
               await dbService.addDrugHistory(widget.drugId, 'atlandı');
               await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+              await dbService.updateDisciplineScore(-5);
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Atladım', style: TextStyle(fontSize: 18, color: Colors.red)),
