@@ -4,6 +4,7 @@ import 'package:disciplined_coach/services/alarm_service.dart';
 import 'package:disciplined_coach/services/database_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 class AddDrugScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class AddDrugScreen extends StatefulWidget {
 class _AddDrugScreenState extends State<AddDrugScreen> {
   final _formKey = GlobalKey<FormState>();
   final AlarmService _alarmService = AlarmService();
+  bool _isLoading = false;
 
   // Form values
   String? _name;
@@ -58,7 +60,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
               TextFormField(
                 initialValue: _name,
                 decoration: const InputDecoration(labelText: 'İlaç Adı'),
-                validator: (val) => val!.isEmpty ? 'Lütfen bir isim girin' : null,
+                validator: (val) => val!.isEmpty ? 'İlaç adı boş olamaz.' : null,
                 onSaved: (val) => _name = val,
               ),
               TextFormField(
@@ -82,14 +84,24 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                 initialValue: _frequencyValue?.toString(),
                 decoration: InputDecoration(labelText: 'Sıklık Değeri (örn: 8 saat, 1 gün)'),
                 keyboardType: TextInputType.number,
-                validator: (val) => val!.isEmpty ? 'Lütfen bir değer girin' : null,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Lütfen bir değer girin.';
+                  }
+                  if (int.tryParse(val) == 0) {
+                    return 'Geçerli bir sıklık girin (sıfırdan büyük).';
+                  }
+                  return null;
+                },
                 onSaved: (val) => _frequencyValue = int.tryParse(val!),
               ),
               TextFormField(
                 initialValue: _stockTotal?.toString(),
                 decoration: const InputDecoration(labelText: 'Stok Adedi'),
                 keyboardType: TextInputType.number,
-                validator: (val) => val!.isEmpty ? 'Lütfen bir adet girin' : null,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (val) => val!.isEmpty ? 'Stok adedi girin.' : null,
                 onSaved: (val) => _stockTotal = int.tryParse(val!),
               ),
               const SizedBox(height: 20),
@@ -108,11 +120,21 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate() && _startDate != null) {
-                    _formKey.currentState!.save();
-                    final dbService = DatabaseService(uid: user!.uid);
+                onPressed: _isLoading ? null : () async {
+                  if (!_formKey.currentState!.validate() || _startDate == null) {
+                    if (_startDate == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Lütfen bir başlangıç tarihi seçin.')),
+                      );
+                    }
+                    return;
+                  }
 
+                  setState(() => _isLoading = true);
+                  _formKey.currentState!.save();
+
+                  try {
+                    final dbService = DatabaseService(uid: user!.uid);
                     final drugData = {
                       'name': _name,
                       'dosage': _dosage,
@@ -120,24 +142,38 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                       'frequencyValue': _frequencyValue,
                       'startDate': Timestamp.fromDate(_startDate!),
                       'stockTotal': _stockTotal,
-                      'stockRemaining': _stockTotal, // Initially same as total
+                      'stockRemaining': _stockTotal,
                     };
 
                     if (widget.drug == null) {
-                      // Add new drug
                       DocumentReference docRef = await dbService.addDrug(drugData);
-                      // Set first alarm
                       await _alarmService.setExactDrugAlarm(docRef.id, _startDate!);
                     } else {
-                      // Update existing drug
                       await dbService.updateDrug(widget.drug!.id, drugData);
-                      // Recalculate and set next alarm
                       await _alarmService.setExactDrugAlarm(widget.drug!.id, _startDate!);
                     }
-                    if (mounted) Navigator.pop(context);
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('İlaç başarıyla kaydedildi.')),
+                      );
+                      Navigator.pop(context);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Kayıt hatası: $e')),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => _isLoading = false);
+                    }
                   }
                 },
-                child: const Text('Kaydet'),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Kaydet'),
               )
             ],
           ),
