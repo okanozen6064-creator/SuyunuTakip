@@ -26,7 +26,7 @@ class AuthService {
 
       // Create a new document for the user with the uid
       if (user != null) {
-        await DatabaseService(uid: user.uid).initializeUserData();
+        await DatabaseService(uid: user.uid).updateUserData();
       }
       return result;
     } catch (e) {

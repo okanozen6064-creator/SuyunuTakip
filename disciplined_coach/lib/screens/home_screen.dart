@@ -25,11 +25,13 @@ class HomeScreen extends StatelessWidget {
         if (snapshot.hasData) {
           final userData = snapshot.data!.data() as Map<String, dynamic>?;
           final disciplineScore = userData?['disciplineScore'] ?? 100;
+          final todayWaterIntake = userData?['todayWaterIntake'] ?? 0;
+          final dailyWaterGoal = userData?['dailyWaterGoal'] ?? 3000;
+          final waterProgress = (dailyWaterGoal > 0) ? todayWaterIntake / dailyWaterGoal : 0.0;
 
           return Scaffold(
             appBar: AppBar(
               title: const Text('Disiplinli Koç'),
-              backgroundColor: Colors.grey[850],
               actions: <Widget>[
                 TextButton.icon(
                   icon: const Icon(Icons.logout, color: Colors.white),
@@ -46,6 +48,8 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   _buildDisciplineScoreCard(context, disciplineScore),
+                  const SizedBox(height: 20),
+                  _buildWaterCockpitCard(context, todayWaterIntake, dailyWaterGoal, waterProgress, user.uid),
                   const SizedBox(height: 20),
                   _buildMedicationListCard(context, user.uid),
                 ],
@@ -70,25 +74,98 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDisciplineScoreCard(BuildContext context, int score) {
-    Color cardColor;
-    if (score >= 80) {
-      cardColor = Colors.green.shade100;
-    } else if (score >= 50) {
-      cardColor = Colors.orange.shade100;
-    } else {
-      cardColor = Colors.red.shade100;
+    Color getScoreColor(int score) {
+      if (score >= 80) {
+        return Theme.of(context).colorScheme.primary; // Cerrahi Yeşil
+      } else if (score >= 50) {
+        return Colors.amber;
+      } else {
+        return Theme.of(context).colorScheme.error; // Kanamalı Kırmızı
+      }
     }
 
     return Card(
-      elevation: 4.0,
-      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Text('Disiplin Puanı', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
-            Text(score.toString(), style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+            Text(
+              score.toString(),
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                color: getScoreColor(score),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaterCockpitCard(BuildContext context, int current, int goal, double progress, String uid) {
+    final dbService = DatabaseService(uid: uid);
+    final TextEditingController manualInputController = TextEditingController();
+
+    void showManualAddDialog() {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Manuel Su Girişi'),
+            content: TextField(
+              controller: manualInputController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: "ml cinsinden girin"),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final amount = int.tryParse(manualInputController.text);
+                  if (amount != null && amount > 0) {
+                    await dbService.updateTodayWaterIntake(current + amount);
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
+                child: const Text('Ekle'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text('Su Kokpiti', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 10),
+            Text('$current / $goal ml', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'RobotoMono')),
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: Colors.grey[800],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 200), child: const Text('+200ml')),
+                ElevatedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 500), child: const Text('+500ml')),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: showManualAddDialog,
+                  tooltip: 'Manuel Ekle',
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -97,7 +174,6 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildMedicationListCard(BuildContext context, String uid) {
     return Card(
-      elevation: 4.0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

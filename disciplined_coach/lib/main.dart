@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:disciplined_coach/screens/wrapper.dart';
 import 'package:disciplined_coach/screens/alarm_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -31,6 +32,29 @@ class MainApp extends StatelessWidget {
       value: AuthService().user,
       initialData: null,
       child: MaterialApp(
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          cardColor: const Color(0xFF1E1E1E),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFF00C853), // Cerrahi Yeşil
+            secondary: Color(0xFF00C853),
+            error: Color(0xFFD50000), // Kanamalı Kırmızı
+          ),
+          textTheme: GoogleFonts.interTextTheme(
+            ThemeData.dark().textTheme,
+          ).copyWith(
+            displayLarge: GoogleFonts.robotoMono(fontSize: 48, fontWeight: FontWeight.bold),
+            // Diğer text stillerini de buraya ekleyebiliriz.
+          ),
+          cardTheme: CardTheme(
+            elevation: 4.0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+          ),
+        ),
         initialRoute: '/',
         onGenerateRoute: (settings) {
           if (settings.name != null && settings.name!.startsWith('/alarm/')) {

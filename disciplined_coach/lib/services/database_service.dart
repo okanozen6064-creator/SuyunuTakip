@@ -12,11 +12,17 @@ class DatabaseService {
   // Get user's drugs subcollection reference
   CollectionReference get drugCollection => userCollection.doc(uid).collection('drugs');
 
-  // Called when a new user registers to set initial data
-  Future<void> initializeUserData() async {
+  Future<void> updateUserData({
+    int? disciplineScore,
+    int? dailyWaterGoal,
+    int? todayWaterIntake,
+  }) async {
     return await userCollection.doc(uid).set({
-      'disciplineScore': 100,
-    });
+      'disciplineScore': disciplineScore ?? 100,
+      'dailyWaterGoal': dailyWaterGoal ?? 3000,
+      'todayWaterIntake': todayWaterIntake ?? 0,
+      'lastWaterResetDate': Timestamp.now(),
+    }, SetOptions(merge: true));
   }
 
   // Get user data stream
@@ -24,10 +30,17 @@ class DatabaseService {
     return userCollection.doc(uid).snapshots();
   }
 
-  // Update discipline score by an increment (e.g., -5 or +1)
-  Future<void> updateDisciplineScore(int change) async {
+  // Update discipline score
+  Future<void> updateDisciplineScore(int newScore) async {
     return await userCollection.doc(uid).update({
-      'disciplineScore': FieldValue.increment(change),
+      'disciplineScore': newScore,
+    });
+  }
+
+  // Update today's water intake
+  Future<void> updateTodayWaterIntake(int newWaterAmount) async {
+    return await userCollection.doc(uid).update({
+      'todayWaterIntake': newWaterAmount,
     });
   }
 
