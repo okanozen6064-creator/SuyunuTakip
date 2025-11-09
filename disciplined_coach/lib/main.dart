@@ -48,7 +48,7 @@ class MainApp extends StatelessWidget {
             displayLarge: GoogleFonts.robotoMono(fontSize: 48, fontWeight: FontWeight.bold),
             // Diğer text stillerini de buraya ekleyebiliriz.
           ),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             elevation: 4.0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0),
