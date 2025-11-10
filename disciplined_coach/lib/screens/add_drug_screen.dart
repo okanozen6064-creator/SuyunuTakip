@@ -50,10 +50,12 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
       appBar: AppBar(
         title: Text(widget.drug == null ? 'Yeni İlaç Ekle' : 'İlacı Düzenle'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      body: Hero(
+        tag: 'add_drug_hero',
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -177,6 +179,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
               )
             ],
           ),
+        ),
         ),
       ),
     );

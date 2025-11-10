@@ -2,13 +2,41 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:disciplined_coach/models/drug.dart';
 import 'package:disciplined_coach/screens/add_drug_screen.dart';
 import 'package:disciplined_coach/services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:disciplined_coach/models/drug.dart';
+import 'package:disciplined_coach/screens/add_drug_screen.dart';
+import 'package:disciplined_coach/services/auth_service.dart';
 import 'package:disciplined_coach/services/database_service.dart';
+import 'package:disciplined_coach/widgets/discipline_score_widget.dart';
+import 'package:disciplined_coach/widgets/main_background.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
+import 'package:confetti/confetti.dart';
 import 'package:provider/provider.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 1));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,76 +58,115 @@ class HomeScreen extends StatelessWidget {
           final waterProgress = (dailyWaterGoal > 0) ? todayWaterIntake / dailyWaterGoal : 0.0;
 
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Disiplinli Koç'),
-              actions: <Widget>[
-                TextButton.icon(
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text('Çıkış Yap', style: TextStyle(color: Colors.white)),
-                  onPressed: () async {
-                    await auth.signOut();
-                  },
-                )
+            body: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                MainBackground(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // TODO: Replace with new futuristic app bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          label: const Text('Çıkış Yap', style: TextStyle(color: Colors.white)),
+                          onPressed: () async {
+                            await auth.signOut();
+                          },
+                        )
+                      ],
+                    ),
+                    DisciplineScoreWidget(score: disciplineScore),
+                    if (disciplineScore < 50) ...[
+                      const SizedBox(height: 20),
+                      Center(
+                        child: DefaultTextStyle(
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            fontFamily: 'RobotoMono',
+                            color: Colors.redAccent,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 7.0,
+                                color: Colors.redAccent,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                          child: AnimatedTextKit(
+                            repeatForever: true,
+                            animatedTexts: [
+                              FlickerAnimatedText('UYARI: DİSİPLİN KIRILGANLIĞI TESPİT EDİLDİ'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    _buildWaterCockpitCard(context, todayWaterIntake, dailyWaterGoal, waterProgress, user.uid),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 40,
+                      child: DefaultTextStyle(
+                        style: const TextStyle(
+                          fontSize: 14.0,
+                          fontFamily: 'RobotoMono',
+                          color: Colors.white70,
+                        ),
+                        child: AnimatedTextKit(
+                          repeatForever: true,
+                          pause: const Duration(milliseconds: 2000),
+                          animatedTexts: [
+                            TyperAnimatedText('Acı geçicidir. Disiplin sonsuza dek kalır.'),
+                            TyperAnimatedText('Bugünün disiplini, yarının zaferidir.'),
+                            TyperAnimatedText('Zayıflık bir seçimdir. Başka bir şey seç.'),
+                            TyperAnimatedText('Sorumluluktan kaçma. Sağlığından kaçamazsın.'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildMedicationListCard(context, user.uid),
+                  ],
+                    ),
+                  ),
+                ),
+                ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  shouldLoop: false,
+                  colors: const [
+                    Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple
+                  ],
+                  particleDrag: 0.05,
+                  emissionFrequency: 0.05,
+                  numberOfParticles: 20,
+                  gravity: 0.05,
+                ),
               ],
             ),
-            body: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  _buildDisciplineScoreCard(context, disciplineScore),
-                  const SizedBox(height: 20),
-                  _buildWaterCockpitCard(context, todayWaterIntake, dailyWaterGoal, waterProgress, user.uid),
-                  const SizedBox(height: 20),
-                  _buildMedicationListCard(context, user.uid),
-                ],
+            floatingActionButton: Hero(
+              tag: 'add_drug_hero',
+              child: FloatingActionButton(
+                tooltip: 'İlaç Ekle',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddDrugScreen()),
+                  );
+                },
+                child: const Icon(Icons.add),
               ),
-            ),
-            floatingActionButton: FloatingActionButton(
-              tooltip: 'İlaç Ekle',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddDrugScreen()),
-                );
-              },
-              child: const Icon(Icons.add),
             ),
           );
         } else {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
       },
-    );
-  }
-
-  Widget _buildDisciplineScoreCard(BuildContext context, int score) {
-    Color getScoreColor(int score) {
-      if (score >= 80) {
-        return Theme.of(context).colorScheme.primary; // Cerrahi Yeşil
-      } else if (score >= 50) {
-        return Colors.amber;
-      } else {
-        return Theme.of(context).colorScheme.error; // Kanamalı Kırmızı
-      }
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text('Disiplin Puanı', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            Text(
-              score.toString(),
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                color: getScoreColor(score),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -139,85 +206,141 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text('Su Kokpiti', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            Text('$current / $goal ml', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'RobotoMono')),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Text('Su Kokpiti', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white)),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 120,
+            width: 120,
+            child: LiquidCircularProgressIndicator(
               value: progress,
-              minHeight: 10,
-              backgroundColor: Colors.grey[800],
+              valueColor: AlwaysStoppedAnimation(Colors.blue.shade200),
+              backgroundColor: Colors.transparent,
+              borderColor: Colors.blue.shade800,
+              borderWidth: 2.0,
+              direction: Axis.vertical,
+              center: Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'RobotoMono', color: Colors.white),
+              ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 200), child: const Text('+200ml')),
-                ElevatedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 500), child: const Text('+500ml')),
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: showManualAddDialog,
-                  tooltip: 'Manuel Ekle',
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text('$current / $goal ml', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'RobotoMono', color: Colors.white70)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              OutlinedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 200), child: const Text('+200ml')),
+              OutlinedButton(onPressed: () async => await dbService.updateTodayWaterIntake(current + 500), child: const Text('+500ml')),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white70),
+                onPressed: showManualAddDialog,
+                tooltip: 'Manuel Ekle',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildMedicationListCard(BuildContext context, String uid) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text('Bugünün İlaçları', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            StreamBuilder<List<Drug>>(
-              stream: DatabaseService(uid: uid).drugs,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Text('Henüz ilaç eklenmedi.');
-                }
-                final drugs = snapshot.data!;
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: drugs.length,
-                  itemBuilder: (context, index) {
-                    final drug = drugs[index];
-                    return Dismissible(
-                      key: Key(drug.id),
-                      onDismissed: (direction) async {
-                        await DatabaseService(uid: uid).deleteDrug(drug.id);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Text('İlaç Görevleri', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white)),
+          const SizedBox(height: 10),
+          StreamBuilder<List<Drug>>(
+            stream: DatabaseService(uid: uid).drugs,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CircularProgressIndicator();
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Text('Tüm görevler tamamlandı. Disiplin kazandı.', style: TextStyle(color: Colors.white70));
+              }
+              final drugs = snapshot.data!;
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: drugs.length,
+                itemBuilder: (context, index) {
+                  final drug = drugs[index];
+                  // TODO: Implement particle effect on "Aldım" press
+                  return Dismissible(
+                    key: Key(drug.id),
+                    direction: DismissDirection.startToEnd,
+                    onDismissed: (direction) async {
+                      await DatabaseService(uid: uid).deleteDrug(drug.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${drug.name} silindi.')),
+                      );
+                    },
+                    background: Container(
+                      color: Colors.red.withOpacity(0.3),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddDrugScreen(drug: drug),
+                          ),
+                        );
                       },
-                      background: Container(color: Colors.red),
-                      child: ListTile(
-                        title: Text(drug.name),
-                        subtitle: Text(drug.dosage),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddDrugScreen(drug: drug),
-                            ),
-                          );
-                        },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(drug.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(drug.dosage, style: const TextStyle(color: Colors.white70)),
+                            ],
+                          ),
+                          OutlinedButton(
+                            onPressed: () async {
+                              _confettiController.play();
+                              // We wait a bit for the animation to be seen before deleting
+                              await Future.delayed(const Duration(milliseconds: 500));
+                              await DatabaseService(uid: uid).deleteDrug(drug.id);
+                            },
+                            child: const Text('Aldım'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
     );
   }
