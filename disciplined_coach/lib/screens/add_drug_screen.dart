@@ -50,17 +50,20 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
       appBar: AppBar(
         title: Text(widget.drug == null ? 'Yeni İlaç Ekle' : 'İlacı Düzenle'),
       ),
-      body: Hero(
-        tag: 'add_drug_hero',
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              TextFormField(
-                initialValue: _name,
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    final formContent = SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TextFormField(
+              initialValue: _name,
                 decoration: const InputDecoration(labelText: 'İlaç Adı'),
                 validator: (val) => val!.isEmpty ? 'İlaç adı boş olamaz.' : null,
                 onSaved: (val) => _name = val,
@@ -180,9 +183,16 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
             ],
           ),
         ),
-        ),
       ),
     );
+
+    if (widget.drug == null) {
+      // Only wrap in a Hero for the "add new drug" flow.
+      return Hero(tag: 'add_drug_hero', child: formContent);
+    } else {
+      // Don't use Hero for the "edit existing drug" flow.
+      return formContent;
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
