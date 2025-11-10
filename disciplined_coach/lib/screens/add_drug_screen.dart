@@ -64,12 +64,12 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
           children: <Widget>[
             TextFormField(
               initialValue: _name,
-                decoration: const InputDecoration(labelText: 'İlaç Adı'),
-                validator: (val) => val!.isEmpty ? 'İlaç adı boş olamaz.' : null,
-                onSaved: (val) => _name = val,
-              ),
-              TextFormField(
-                initialValue: _dosage,
+              decoration: const InputDecoration(labelText: 'İlaç Adı'),
+              validator: (val) => val!.isEmpty ? 'İlaç adı boş olamaz.' : null,
+              onSaved: (val) => _name = val,
+            ),
+            TextFormField(
+              initialValue: _dosage,
                 decoration: const InputDecoration(labelText: 'Dozaj (örn: 500mg)'),
                 validator: (val) => val!.isEmpty ? 'Lütfen bir dozaj girin' : null,
                 onSaved: (val) => _dosage = val,
@@ -179,20 +179,18 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Kaydet'),
-              )
+              ),
             ],
           ),
         ),
-      ),
     );
 
     if (widget.drug == null) {
       // Only wrap in a Hero for the "add new drug" flow.
       return Hero(tag: 'add_drug_hero', child: formContent);
-    } else {
+    }
       // Don't use Hero for the "edit existing drug" flow.
       return formContent;
-    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
