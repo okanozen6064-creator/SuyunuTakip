@@ -193,12 +193,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
         ),
     );
 
-    if (widget.drug == null) {
-      // Only wrap in a Hero for the "add new drug" flow.
-      return Hero(tag: 'add_drug_hero', child: formContent);
-    }
-      // Don't use Hero for the "edit existing drug" flow.
-      return formContent;
+    return formContent;
   }
 
   Future<void> _selectDate(BuildContext context) async {

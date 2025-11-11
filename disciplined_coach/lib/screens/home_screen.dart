@@ -149,18 +149,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            floatingActionButton: Hero(
-              tag: 'add_drug_hero',
-              child: FloatingActionButton(
-                tooltip: 'İlaç Ekle',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AddDrugScreen()),
-                  );
-                },
-                child: const Icon(Icons.add),
-              ),
+            floatingActionButton: FloatingActionButton(
+              tooltip: 'İlaç Ekle',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddDrugScreen()),
+                );
+              },
+              child: const Icon(Icons.add),
             ),
           );
         } else {
