@@ -126,6 +126,14 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isLoading ? null : () async {
+                  final user = Provider.of<User?>(context, listen: false);
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Hata: Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.')),
+                    );
+                    return;
+                  }
+
                   if (!_formKey.currentState!.validate() || _startDate == null) {
                     if (_startDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,7 +147,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                   _formKey.currentState!.save();
 
                   try {
-                    final dbService = DatabaseService(uid: user!.uid);
+                    final dbService = DatabaseService(uid: user.uid);
                     final drugData = {
                       'name': _name,
                       'dosage': _dosage,
