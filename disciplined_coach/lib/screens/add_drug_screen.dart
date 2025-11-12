@@ -156,6 +156,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                       'startDate': Timestamp.fromDate(_startDate!),
                       'stockTotal': _stockTotal,
                       'stockRemaining': _stockTotal,
+                      'nextAlarmTime': Timestamp.fromDate(_startDate!),
                     };
 
                     if (widget.drug == null) {

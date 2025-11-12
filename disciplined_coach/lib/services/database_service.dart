@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:disciplined_coach/models/drug.dart';
+import 'package:home_widget/home_widget.dart';
 
 class DatabaseService {
   final String? uid;
@@ -32,9 +33,11 @@ class DatabaseService {
 
   // Update discipline score
   Future<void> updateDisciplineScore(int newScore) async {
-    return await userCollection.doc(uid).update({
+    await userCollection.doc(uid).update({
       'disciplineScore': newScore,
     });
+    await HomeWidget.saveWidgetData<int>('score', newScore);
+    await HomeWidget.updateWidget(name: 'ScoreWidgetProvider', iOSName: 'ScoreWidget');
   }
 
   // Update today's water intake
@@ -90,5 +93,50 @@ class DatabaseService {
       'actionTime': Timestamp.now(),
       'status': status,
     });
+  }
+
+  // Log a skipped drug with an excuse
+  Future<void> logSkippedDrug(String drugId, {required String excuse}) async {
+    await drugHistoryCollection.add({
+      'userId': uid,
+      'drugId': drugId,
+      'scheduledTime': Timestamp.now(), // Placeholder
+      'actionTime': Timestamp.now(),
+      'status': 'atlandı',
+      'excuse': excuse,
+    });
+    // TODO: Implement discipline score reduction for skipping.
+  }
+
+  // Get tomorrow's summary
+  Future<Map<String, dynamic>> getTomorrowsSummary() async {
+    final now = DateTime.now();
+    final tomorrowStart = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 1));
+    final tomorrowEnd = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 2));
+
+    try {
+      final snapshot = await drugCollection
+          .where('nextAlarmTime', isGreaterThanOrEqualTo: tomorrowStart)
+          .where('nextAlarmTime', isLessThan: tomorrowEnd)
+          .orderBy('nextAlarmTime')
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {'totalDrugs': 0, 'firstAlarmTime': null};
+      }
+
+      final totalDrugs = snapshot.docs.length;
+      final firstAlarmTime = (snapshot.docs.first.data() as Map<String, dynamic>)['nextAlarmTime'] as Timestamp;
+
+      return {
+        'totalDrugs': totalDrugs,
+        'firstAlarmTime': firstAlarmTime.toDate(),
+      };
+    } catch (e) {
+      // This can happen if the field 'nextAlarmTime' doesn't exist yet.
+      // We'll return a default state.
+      print('Error getting tomorrow summary: $e');
+      return {'totalDrugs': 0, 'firstAlarmTime': null};
+    }
   }
 }
