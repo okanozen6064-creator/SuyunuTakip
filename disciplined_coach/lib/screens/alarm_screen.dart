@@ -69,48 +69,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-  void _showExcuseDialog(BuildContext context, String drugId) {
-    final TextEditingController excuseController = TextEditingController();
-    final user = Provider.of<User?>(context, listen: false);
-    final dbService = DatabaseService(uid: user!.uid);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false, // User must interact with the dialog
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Neden Atladın?'),
-          content: TextField(
-            controller: excuseController,
-            decoration: const InputDecoration(hintText: "Bahaneni yaz..."),
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Yüzleş ve Kaydet'),
-              onPressed: () async {
-                final excuse = excuseController.text.trim();
-                if (excuse.isNotEmpty) {
-                  await dbService.logSkippedDrug(drugId, excuse: excuse);
-
-                  // Pop the dialog and then the alarm screen
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                  if (context.mounted) Navigator.of(context).pop();
-
-                } else {
-                  // Optionally, show an error to the user
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(content: Text('Bahane boş bırakılamaz. Kendinle yüzleş.')),
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildActionButtons(BuildContext context, Map<String, dynamic> drugData) {
     final user = Provider.of<User?>(context, listen: false);
     final dbService = DatabaseService(uid: user!.uid);
@@ -118,9 +76,10 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
     final frequencyType = drugData['frequencyType'] ?? 'Saatlik';
     final frequencyValue = drugData['frequencyValue'] ?? 8;
-    final stockRemaining = drugData['stockRemaining'] ?? 0;
 
     DateTime calculateNextAlarmTime() {
+      // NOTE: This logic assumes that the base time is always 'now'.
+      // For a more robust system, this should be based on the drug's original schedule.
       if (frequencyType == 'Saatlik') {
         return DateTime.now().add(Duration(hours: frequencyValue));
       } else {
@@ -128,49 +87,64 @@ class _AlarmScreenState extends State<AlarmScreen> {
       }
     }
 
-    final nextAlarmTime = calculateNextAlarmTime();
-
     return Column(
       children: [
+        // "Aldım" Button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(20)),
             onPressed: () async {
-              if (stockRemaining > 0) {
-                await dbService.updateDrug(widget.drugId, {
-                  'stockRemaining': stockRemaining - 1,
-                  'nextAlarmTime': Timestamp.fromDate(nextAlarmTime),
-                });
-                await dbService.addDrugHistory(widget.drugId, 'alındı');
-                await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
-              }
+              await dbService.logDrugAction(widget.drugId, 'alındı');
+              await dbService.decrementStock(widget.drugId);
+
+              final nextAlarmTime = calculateNextAlarmTime();
+              await dbService.updateDrug(widget.drugId, {'nextAlarmTime': Timestamp.fromDate(nextAlarmTime)});
+              await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Aldım', style: TextStyle(fontSize: 20)),
           ),
         ),
         const SizedBox(height: 20),
+
+        // "Ertele" Button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(20)),
             onPressed: () async {
-              await dbService.addDrugHistory(widget.drugId, 'ertelendi_1');
-              await alarmService.setExactDrugAlarm(widget.drugId, DateTime.now().add(const Duration(minutes: 15)));
+              await dbService.logDrugAction(widget.drugId, 'ertelendi_1');
+              final nextAlarmTime = DateTime.now().add(const Duration(minutes: 15));
+              await dbService.updateDrug(widget.drugId, {'nextAlarmTime': Timestamp.fromDate(nextAlarmTime)});
+              await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Ertele (15 dk)', style: TextStyle(fontSize: 20)),
           ),
         ),
         const SizedBox(height: 20),
+
+        // "Atladım" Button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: TextButton(
-            onPressed: () {
-              _showExcuseDialog(context, widget.drugId);
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFD50000), // Kanamalı Kırmızı
+            ),
+            onPressed: () async {
+              await dbService.logDrugAction(widget.drugId, 'atlandı');
+              await dbService.updateDisciplineScore(-5);
+
+              final nextAlarmTime = calculateNextAlarmTime();
+              await dbService.updateDrug(widget.drugId, {'nextAlarmTime': Timestamp.fromDate(nextAlarmTime)});
+              await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
+
+              if (mounted) Navigator.pop(context);
             },
-            child: const Text('Atladım', style: TextStyle(fontSize: 18, color: Colors.red)),
+            child: const Text('Atladım', style: TextStyle(fontSize: 18)),
           ),
         ),
       ],

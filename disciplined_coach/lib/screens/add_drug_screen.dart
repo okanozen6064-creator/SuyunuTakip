@@ -47,10 +47,25 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
     final user = Provider.of<User?>(context, listen: false);
 
     return Scaffold(
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         title: Text(widget.drug == null ? 'Yeni İlaç Ekle' : 'İlacı Düzenle'),
+        backgroundColor: const Color(0xFF1E1E1E),
       ),
       body: _buildBody(),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.grey[900],
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white54),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
     );
   }
 
@@ -64,19 +79,21 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
           children: <Widget>[
             TextFormField(
               initialValue: _name,
-              decoration: const InputDecoration(labelText: 'İlaç Adı'),
+              decoration: _inputDecoration('İlaç Adı'),
               validator: (val) => val!.isEmpty ? 'İlaç adı boş olamaz.' : null,
               onSaved: (val) => _name = val,
             ),
+            const SizedBox(height: 16),
             TextFormField(
               initialValue: _dosage,
-                decoration: const InputDecoration(labelText: 'Dozaj (örn: 500mg)'),
+                decoration: _inputDecoration('Dozaj (örn: 500mg)'),
                 validator: (val) => val!.isEmpty ? 'Lütfen bir dozaj girin' : null,
                 onSaved: (val) => _dosage = val,
               ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _frequencyType,
-                decoration: const InputDecoration(labelText: 'Sıklık Tipi'),
+                decoration: _inputDecoration('Sıklık Tipi'),
                 items: ['Saatlik', 'Günlük'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -85,9 +102,10 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                 }).toList(),
                 onChanged: (val) => setState(() => _frequencyType = val!),
               ),
+              const SizedBox(height: 16),
               TextFormField(
                 initialValue: _frequencyValue?.toString(),
-                decoration: InputDecoration(labelText: 'Sıklık Değeri (örn: 8 saat, 1 gün)'),
+                decoration: _inputDecoration('Sıklık Değeri (örn: 8 saat, 1 gün)'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (val) {
@@ -101,9 +119,10 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                 },
                 onSaved: (val) => _frequencyValue = int.tryParse(val!),
               ),
+              const SizedBox(height: 16),
               TextFormField(
                 initialValue: _stockTotal?.toString(),
-                decoration: const InputDecoration(labelText: 'Stok Adedi'),
+                decoration: _inputDecoration('Stok Adedi'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (val) => val!.isEmpty ? 'Stok adedi girin.' : null,
@@ -123,71 +142,81 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                   )
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isLoading ? null : () async {
-                  final user = Provider.of<User?>(context, listen: false);
-                  if (user == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Hata: Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.')),
-                    );
-                    return;
-                  }
+              const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00C853), // Cerrahi Yeşil
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: _isLoading ? null : () async {
+                      final user = Provider.of<User?>(context, listen: false);
+                      if (user == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Hata: Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.')),
+                        );
+                        return;
+                      }
 
-                  if (!_formKey.currentState!.validate() || _startDate == null) {
-                    if (_startDate == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Lütfen bir başlangıç tarihi seçin.')),
-                      );
-                    }
-                    return;
-                  }
+                      if (!_formKey.currentState!.validate() || _startDate == null) {
+                        if (_startDate == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lütfen bir başlangıç tarihi seçin.')),
+                          );
+                        }
+                        return;
+                      }
 
-                  setState(() => _isLoading = true);
-                  _formKey.currentState!.save();
+                      setState(() => _isLoading = true);
+                      _formKey.currentState!.save();
 
-                  try {
-                    final dbService = DatabaseService(uid: user.uid);
-                    final drugData = {
-                      'name': _name,
-                      'dosage': _dosage,
-                      'frequencyType': _frequencyType,
-                      'frequencyValue': _frequencyValue,
-                      'startDate': Timestamp.fromDate(_startDate!),
-                      'stockTotal': _stockTotal,
-                      'stockRemaining': _stockTotal,
-                      'nextAlarmTime': Timestamp.fromDate(_startDate!),
-                    };
+                      try {
+                        final dbService = DatabaseService(uid: user.uid);
+                        final drugData = {
+                          'name': _name,
+                          'dosage': _dosage,
+                          'frequencyType': _frequencyType,
+                          'frequencyValue': _frequencyValue,
+                          'startDate': Timestamp.fromDate(_startDate!),
+                          'stockTotal': _stockTotal,
+                          'stockRemaining': _stockTotal,
+                          'nextAlarmTime': Timestamp.fromDate(_startDate!),
+                        };
 
-                    if (widget.drug == null) {
-                      DocumentReference docRef = await dbService.addDrug(drugData);
-                      await _alarmService.setExactDrugAlarm(docRef.id, _startDate!);
-                    } else {
-                      await dbService.updateDrug(widget.drug!.id, drugData);
-                      await _alarmService.setExactDrugAlarm(widget.drug!.id, _startDate!);
-                    }
+                        if (widget.drug == null) {
+                          DocumentReference docRef = await dbService.addDrug(drugData);
+                          await _alarmService.setExactDrugAlarm(docRef.id, _startDate!);
+                        } else {
+                          await dbService.updateDrug(widget.drug!.id, drugData);
+                          await _alarmService.setExactDrugAlarm(widget.drug!.id, _startDate!);
+                        }
 
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('İlaç başarıyla kaydedildi.')),
-                      );
-                      Navigator.pop(context);
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Kayıt hatası: $e')),
-                      );
-                    }
-                  } finally {
-                    if (mounted) {
-                      setState(() => _isLoading = false);
-                    }
-                  }
-                },
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Kaydet'),
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('İlaç başarıyla kaydedildi.')),
+                          );
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Kayıt hatası: $e')),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _isLoading = false);
+                        }
+                      }
+                    },
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Kaydet'),
+                  ),
+                ),
               ),
             ],
           ),

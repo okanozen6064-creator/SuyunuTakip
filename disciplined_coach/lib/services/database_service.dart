@@ -30,10 +30,10 @@ class DatabaseService {
     return userCollection.doc(uid).snapshots();
   }
 
-  // Update discipline score
-  Future<void> updateDisciplineScore(int newScore) async {
-    await userCollection.doc(uid).update({
-      'disciplineScore': newScore,
+  // Update discipline score by an amount (e.g., -5 for penalty)
+  Future<void> updateDisciplineScore(int amount) async {
+    return await userCollection.doc(uid).update({
+      'disciplineScore': FieldValue.increment(amount),
     });
   }
 
@@ -81,59 +81,21 @@ class DatabaseService {
     return await drugCollection.doc(drugId).delete();
   }
 
-  // Add a drug history record
-  Future<void> addDrugHistory(String drugId, String status) async {
+  // Decrement stock for a drug
+  Future<void> decrementStock(String drugId) async {
+    return await drugCollection.doc(drugId).update({
+      'stockRemaining': FieldValue.increment(-1),
+    });
+  }
+
+  // Log a drug action to history
+  Future<void> logDrugAction(String drugId, String status) async {
     await drugHistoryCollection.add({
       'userId': uid,
       'drugId': drugId,
-      'scheduledTime': Timestamp.now(), // Placeholder, will be passed from alarm
+      'scheduledTime': Timestamp.now(), // Placeholder, should be the actual alarm time
       'actionTime': Timestamp.now(),
       'status': status,
     });
-  }
-
-  // Log a skipped drug with an excuse
-  Future<void> logSkippedDrug(String drugId, {required String excuse}) async {
-    await drugHistoryCollection.add({
-      'userId': uid,
-      'drugId': drugId,
-      'scheduledTime': Timestamp.now(), // Placeholder
-      'actionTime': Timestamp.now(),
-      'status': 'atlandı',
-      'excuse': excuse,
-    });
-    // TODO: Implement discipline score reduction for skipping.
-  }
-
-  // Get tomorrow's summary
-  Future<Map<String, dynamic>> getTomorrowsSummary() async {
-    final now = DateTime.now();
-    final tomorrowStart = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 1));
-    final tomorrowEnd = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 2));
-
-    try {
-      final snapshot = await drugCollection
-          .where('nextAlarmTime', isGreaterThanOrEqualTo: tomorrowStart)
-          .where('nextAlarmTime', isLessThan: tomorrowEnd)
-          .orderBy('nextAlarmTime')
-          .get();
-
-      if (snapshot.docs.isEmpty) {
-        return {'totalDrugs': 0, 'firstAlarmTime': null};
-      }
-
-      final totalDrugs = snapshot.docs.length;
-      final firstAlarmTime = (snapshot.docs.first.data() as Map<String, dynamic>)['nextAlarmTime'] as Timestamp;
-
-      return {
-        'totalDrugs': totalDrugs,
-        'firstAlarmTime': firstAlarmTime.toDate(),
-      };
-    } catch (e) {
-      // This can happen if the field 'nextAlarmTime' doesn't exist yet.
-      // We'll return a default state.
-      print('Error getting tomorrow summary: $e');
-      return {'totalDrugs': 0, 'firstAlarmTime': null};
-    }
   }
 }
