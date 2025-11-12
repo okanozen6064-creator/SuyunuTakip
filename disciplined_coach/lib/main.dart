@@ -7,9 +7,19 @@ import 'package:disciplined_coach/screens/alarm_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
+import 'package:home_widget/home_widget.dart';
+
+// Called when Doing Background Work
+@pragma('vm:entry-point')
+void backgroundCallback(Uri? uri) async {
+  if (uri?.host == 'updatecounter') {
+    //
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  HomeWidget.registerBackgroundCallback(backgroundCallback);
 
   try {
     await Firebase.initializeApp(

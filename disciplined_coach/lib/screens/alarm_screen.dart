@@ -69,6 +69,48 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
+  void _showExcuseDialog(BuildContext context, String drugId) {
+    final TextEditingController excuseController = TextEditingController();
+    final user = Provider.of<User?>(context, listen: false);
+    final dbService = DatabaseService(uid: user!.uid);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must interact with the dialog
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Neden Atladın?'),
+          content: TextField(
+            controller: excuseController,
+            decoration: const InputDecoration(hintText: "Bahaneni yaz..."),
+            autofocus: true,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Yüzleş ve Kaydet'),
+              onPressed: () async {
+                final excuse = excuseController.text.trim();
+                if (excuse.isNotEmpty) {
+                  await dbService.logSkippedDrug(drugId, excuse: excuse);
+
+                  // Pop the dialog and then the alarm screen
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                  if (context.mounted) Navigator.of(context).pop();
+
+                } else {
+                  // Optionally, show an error to the user
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Bahane boş bırakılamaz. Kendinle yüzleş.')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildActionButtons(BuildContext context, Map<String, dynamic> drugData) {
     final user = Provider.of<User?>(context, listen: false);
     final dbService = DatabaseService(uid: user!.uid);
@@ -96,7 +138,10 @@ class _AlarmScreenState extends State<AlarmScreen> {
             style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(20)),
             onPressed: () async {
               if (stockRemaining > 0) {
-                await dbService.updateDrug(widget.drugId, {'stockRemaining': stockRemaining - 1});
+                await dbService.updateDrug(widget.drugId, {
+                  'stockRemaining': stockRemaining - 1,
+                  'nextAlarmTime': Timestamp.fromDate(nextAlarmTime),
+                });
                 await dbService.addDrugHistory(widget.drugId, 'alındı');
                 await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
               }
@@ -122,10 +167,8 @@ class _AlarmScreenState extends State<AlarmScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: TextButton(
-            onPressed: () async {
-              await dbService.addDrugHistory(widget.drugId, 'atlandı');
-              await alarmService.setExactDrugAlarm(widget.drugId, nextAlarmTime);
-              if (mounted) Navigator.pop(context);
+            onPressed: () {
+              _showExcuseDialog(context, widget.drugId);
             },
             child: const Text('Atladım', style: TextStyle(fontSize: 18, color: Colors.red)),
           ),
