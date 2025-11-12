@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:disciplined_coach/models/drug.dart';
-import 'package:home_widget/home_widget.dart';
 
 class DatabaseService {
   final String? uid;
@@ -36,8 +35,6 @@ class DatabaseService {
     await userCollection.doc(uid).update({
       'disciplineScore': newScore,
     });
-    await HomeWidget.saveWidgetData<int>('score', newScore);
-    await HomeWidget.updateWidget(name: 'ScoreWidgetProvider', iOSName: 'ScoreWidget');
   }
 
   // Update today's water intake
